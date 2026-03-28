@@ -1,0 +1,20 @@
+{
+  "http_addr": ":8080",
+  "printer": {
+    "sdk_path": "Resources\\Libs\\x64\\Ansi\\TSPL_SDK.dll",
+    "model": "N41BT",
+    "port": "USB",
+    "options": {
+      "label_width_mm": 60,
+      "label_height_mm": 35,
+      "dpi": 203,
+      "speed": 2,
+      "density": 6,
+      "type": 1,
+      "gap_mm": 2,
+      "offset_mm": 0,
+      "margin_left_mm": 6,
+      "margin_top_mm": 2
+    }
+  }
+}
