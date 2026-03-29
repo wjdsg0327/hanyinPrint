@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,12 +12,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type PrinterService struct {
+	cfg PrintConfig
+	mu  sync.Mutex
+}
+
+func NewPrinterService(cfg PrintConfig) *PrinterService {
+	return &PrinterService{cfg: normalizePrintConfig(cfg)}
+}
+
+func (s *PrinterService) PrintFields(fields []ZhyhField, copies int32) (PrinterInfo, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return PrintFields(s.cfg, fields, copies)
+}
+
 // StartHTTPServer 启动 Gin 服务。
 //
 //   - POST /print?copies=1
 //     Body: []ZhyhField
 func StartHTTPServer(cfg PrintConfig, addr string) error {
-	var printMu sync.Mutex
+	return StartHTTPServerWithPrinter(NewPrinterService(cfg), addr)
+}
+
+func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
+	if printer == nil {
+		return errors.New("printer service is nil")
+	}
 
 	g := gin.Default()
 	g.POST("/print", func(c *gin.Context) {
@@ -36,10 +59,7 @@ func StartHTTPServer(cfg PrintConfig, addr string) error {
 			}
 		}
 
-		printMu.Lock()
-		info, err := PrintFields(cfg, fields, copies)
-		printMu.Unlock()
-
+		info, err := printer.PrintFields(fields, copies)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"ok":    false,

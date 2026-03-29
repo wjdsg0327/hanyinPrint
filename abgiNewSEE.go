@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"encoding/json"
@@ -13,12 +13,13 @@ type AbgiClient struct {
 	Conn    *websocket.Conn
 	URL     string
 	Headers http.Header
+	Printer *PrinterService
 	mu      sync.Mutex
 }
 
 var abgiClient *AbgiClient
 
-func Connect(url string) (err error) {
+func Connect(url string, printer *PrinterService) (err error) {
 	defer func() {
 		if err := recover(); err != nil {
 			err = fmt.Errorf("捕获异常:%v", err)
@@ -41,6 +42,7 @@ func Connect(url string) (err error) {
 		Conn:    conn,
 		URL:     url,
 		Headers: nil,
+		Printer: printer,
 	}
 
 	go abgiClient.listen()
@@ -61,8 +63,10 @@ func (c *AbgiClient) listen() {
 		if err != nil {
 			fmt.Printf("解析消息失败:%v\n", err)
 		}
-		if len(zhyhFields) > 0 {
-
+		if len(zhyhFields) > 0 && c.Printer != nil {
+			if _, err := c.Printer.PrintFields(zhyhFields, 1); err != nil {
+				fmt.Printf("打印失败:%v\n", err)
+			}
 		}
 
 		fmt.Println("收到消息", zhyhFields)

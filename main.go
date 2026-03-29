@@ -18,13 +18,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err1 := Connect("ws://127.0.0.1:30000/api/ws/" + appCfg.TenantCode)
+	printer := NewPrinterService(appCfg.Printer)
+
+	err1 := Connect("ws://127.0.0.1:30000/api/ws/"+appCfg.TenantCode, printer)
 	if err1 != nil {
 		fmt.Println("adsdadsd", err1)
 		return
 	}
 
-	if err := StartHTTPServer(appCfg.Printer, appCfg.HTTPAddr); err != nil {
+	if err := StartHTTPServerWithPrinter(printer, appCfg.HTTPAddr); err != nil {
 		log.Fatal(err)
 	}
 
