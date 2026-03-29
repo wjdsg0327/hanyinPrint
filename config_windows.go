@@ -34,9 +34,19 @@ func LoadAppConfigFromJSON(filePath string) (AppConfig, error) {
 
 	cfg.Printer = normalizePrintConfig(cfg.Printer)
 
+	baseDir := filepath.Dir(filePath)
 	if strings.TrimSpace(cfg.Printer.SDKPath) != "" && !filepath.IsAbs(cfg.Printer.SDKPath) {
-		baseDir := filepath.Dir(filePath)
 		cfg.Printer.SDKPath = filepath.Clean(filepath.Join(baseDir, cfg.Printer.SDKPath))
+	}
+
+	if strings.TrimSpace(cfg.Log.FilePath) == "" {
+		cfg.Log.FilePath = filepath.Join("logs", "hanyinPrint.log")
+	}
+	if !filepath.IsAbs(cfg.Log.FilePath) {
+		cfg.Log.FilePath = filepath.Clean(filepath.Join(baseDir, cfg.Log.FilePath))
+	}
+	if strings.TrimSpace(cfg.Log.Level) == "" {
+		cfg.Log.Level = "info"
 	}
 
 	return cfg, nil

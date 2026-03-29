@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 type AbgiClient struct {
@@ -21,21 +23,21 @@ var abgiClient *AbgiClient
 
 func Connect(url string, printer *PrinterService) (err error) {
 	defer func() {
-		if err := recover(); err != nil {
-			err = fmt.Errorf("捕获异常:%v", err)
-			fmt.Println(err)
-			return
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("捕获异常:%v", recovered)
+			L().Error("websocket connect panic", zap.Error(err), zap.String("url", url))
 		}
 	}()
 
 	if abgiClient != nil {
+
 		return fmt.Errorf("已经在线，请勿重复上线")
 	}
 
 	dialer := websocket.DefaultDialer
 	conn, _, err := dialer.Dial(url, nil)
 	if err != nil {
-		return fmt.Errorf("连接失败")
+		return fmt.Errorf("连接失败: %w", err)
 	}
 
 	abgiClient = &AbgiClient{
@@ -45,6 +47,7 @@ func Connect(url string, printer *PrinterService) (err error) {
 		Printer: printer,
 	}
 
+	//L().Info("websocket connected", zap.String("url", url))
 	go abgiClient.listen()
 	return nil
 }
@@ -53,23 +56,24 @@ func (c *AbgiClient) listen() {
 	for {
 		_, msg, err := c.Conn.ReadMessage()
 		if err != nil {
-			fmt.Printf("接收消息失败:%v\n", err)
+			L().Error("websocket read failed", zap.Error(err), zap.String("url", c.URL))
 			go c.reconnectLoop()
 			return
 		}
 
 		var zhyhFields []ZhyhField
-		err = json.Unmarshal(msg, &zhyhFields)
-		if err != nil {
-			fmt.Printf("解析消息失败:%v\n", err)
-		}
-		if len(zhyhFields) > 0 && c.Printer != nil {
-			if _, err := c.Printer.PrintFields(zhyhFields, 1); err != nil {
-				fmt.Printf("打印失败:%v\n", err)
-			}
+		if err := json.Unmarshal(msg, &zhyhFields); err != nil {
+			L().Error("websocket payload parse failed", zap.Error(err), zap.String("url", c.URL), zap.ByteString("payload", msg))
+			continue
 		}
 
-		fmt.Println("收到消息", zhyhFields)
+		L().Info("websocket payload received", zap.String("url", c.URL), zap.Int("field_count", len(zhyhFields)))
+
+		if len(zhyhFields) > 0 && c.Printer != nil {
+			if _, err := c.Printer.PrintFields(zhyhFields, 1); err != nil {
+				L().Error("websocket print failed", zap.Error(err), zap.String("url", c.URL), zap.Int("field_count", len(zhyhFields)))
+			}
+		}
 	}
 }
 
@@ -78,7 +82,7 @@ func (c *AbgiClient) reconnectLoop() {
 	defer c.mu.Unlock()
 
 	if c.Conn != nil {
-		c.Conn.Close()
+		_ = c.Conn.Close()
 		c.Conn = nil
 	}
 
@@ -87,10 +91,11 @@ func (c *AbgiClient) reconnectLoop() {
 		conn, _, err := dialer.Dial(c.URL, c.Headers)
 		if err == nil {
 			c.Conn = conn
+			L().Info("websocket reconnected", zap.String("url", c.URL))
 			go c.listen()
 			return
 		}
-		fmt.Printf("重新连接失败:%v, 1分钟后再试\n", err)
+		L().Warn("websocket reconnect failed", zap.Error(err), zap.String("url", c.URL), zap.Duration("retry_after", time.Minute))
 		time.Sleep(time.Minute)
 	}
 }

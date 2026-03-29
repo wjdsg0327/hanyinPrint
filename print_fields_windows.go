@@ -5,6 +5,8 @@ package main
 import (
 	"errors"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 // PrintFields 打印动态字段数组（由前端传入）。
@@ -19,34 +21,53 @@ func PrintFields(cfg PrintConfig, fields []ZhyhField, copies int32) (PrinterInfo
 		copies = 1
 	}
 
+	L().Info("starting dynamic print",
+		zap.Int("field_count", len(fields)),
+		zap.Int32("copies", copies),
+		zap.String("sdk_path", cfg.SDKPath),
+		zap.String("model", cfg.Model),
+		zap.String("port", cfg.Port),
+	)
+
 	sdk, err := newTSPLSDK(cfg.SDKPath)
 	if err != nil {
+		L().Error("load sdk failed", zap.Error(err), zap.String("sdk_path", cfg.SDKPath))
 		return PrinterInfo{}, err
 	}
+	L().Info("sdk loaded", zap.String("sdk_path", cfg.SDKPath))
 	sdk.sdkInit()
 	defer sdk.sdkDeInit()
 
 	handle, usedModel, err := tryCreatePrinter(sdk, cfg.Model)
 	if err != nil {
+		L().Error("create printer handle failed", zap.Error(err), zap.String("model", cfg.Model))
 		return PrinterInfo{}, err
 	}
 	defer func() {
-		_ = sdk.printerDestroy(handle)
+		if err := sdk.printerDestroy(handle); err != nil {
+			L().Warn("destroy printer handle failed", zap.Error(err), zap.String("used_model", usedModel))
+		}
 	}()
 
 	if err := sdk.portOpen(handle, cfg.Port); err != nil {
+		L().Error("open printer port failed", zap.Error(err), zap.String("port", cfg.Port), zap.String("used_model", usedModel))
 		return PrinterInfo{}, err
 	}
+	L().Info("printer port opened", zap.String("port", cfg.Port), zap.String("used_model", usedModel))
 	defer func() {
-		_ = sdk.portClose(handle)
+		if err := sdk.portClose(handle); err != nil {
+			L().Warn("close printer port failed", zap.Error(err), zap.String("port", cfg.Port), zap.String("used_model", usedModel))
+		}
 	}()
 
 	info, err := readPrinterInfo(sdk, handle, usedModel)
 	if err != nil {
+		L().Error("read printer info failed", zap.Error(err), zap.String("used_model", usedModel))
 		return PrinterInfo{}, err
 	}
 
 	if err := printFields(sdk, handle, cfg.Options, fields, copies); err != nil {
+		L().Error("render dynamic print failed", zap.Error(err), zap.String("used_model", usedModel), zap.Int("field_count", len(fields)))
 		return info, err
 	}
 

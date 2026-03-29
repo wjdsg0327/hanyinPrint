@@ -5,6 +5,8 @@ package main
 import (
 	"errors"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 // PrintProductLabel 打印常见“商品标签”（固定字段版）。
@@ -16,8 +18,18 @@ func PrintProductLabel(cfg PrintConfig, p ProductLabel, copies int32) (PrinterIn
 		copies = 1
 	}
 
+	L().Info("starting product label print",
+		zap.String("name", p.Name),
+		zap.String("sku", p.SKU),
+		zap.Int32("copies", copies),
+		zap.String("sdk_path", cfg.SDKPath),
+		zap.String("model", cfg.Model),
+		zap.String("port", cfg.Port),
+	)
+
 	sdk, err := newTSPLSDK(cfg.SDKPath)
 	if err != nil {
+		L().Error("load sdk failed for product label", zap.Error(err), zap.String("sdk_path", cfg.SDKPath))
 		return PrinterInfo{}, err
 	}
 	sdk.sdkInit()
@@ -25,28 +37,37 @@ func PrintProductLabel(cfg PrintConfig, p ProductLabel, copies int32) (PrinterIn
 
 	handle, usedModel, err := tryCreatePrinter(sdk, cfg.Model)
 	if err != nil {
+		L().Error("create printer handle failed for product label", zap.Error(err), zap.String("model", cfg.Model))
 		return PrinterInfo{}, err
 	}
 	defer func() {
-		_ = sdk.printerDestroy(handle)
+		if err := sdk.printerDestroy(handle); err != nil {
+			L().Warn("destroy printer handle failed", zap.Error(err), zap.String("used_model", usedModel))
+		}
 	}()
 
 	if err := sdk.portOpen(handle, cfg.Port); err != nil {
+		L().Error("open printer port failed for product label", zap.Error(err), zap.String("port", cfg.Port), zap.String("used_model", usedModel))
 		return PrinterInfo{}, err
 	}
 	defer func() {
-		_ = sdk.portClose(handle)
+		if err := sdk.portClose(handle); err != nil {
+			L().Warn("close printer port failed", zap.Error(err), zap.String("port", cfg.Port), zap.String("used_model", usedModel))
+		}
 	}()
 
 	info, err := readPrinterInfo(sdk, handle, usedModel)
 	if err != nil {
+		L().Error("read printer info failed for product label", zap.Error(err), zap.String("used_model", usedModel))
 		return PrinterInfo{}, err
 	}
 
 	if err := printProductLabel(sdk, handle, cfg.Options, p, copies); err != nil {
+		L().Error("render product label failed", zap.Error(err), zap.String("used_model", usedModel), zap.String("sku", p.SKU))
 		return info, err
 	}
 
+	L().Info("product label print prepared", zap.String("used_model", usedModel), zap.String("sku", p.SKU), zap.Int32("copies", copies))
 	return info, nil
 }
 

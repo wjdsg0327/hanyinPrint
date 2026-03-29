@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type PrinterService struct {
@@ -22,10 +24,33 @@ func NewPrinterService(cfg PrintConfig) *PrinterService {
 }
 
 func (s *PrinterService) PrintFields(fields []ZhyhField, copies int32) (PrinterInfo, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	effectiveCopies := copies
+	if effectiveCopies <= 0 {
+		effectiveCopies = 1
+	}
 
-	return PrintFields(s.cfg, fields, copies)
+	start := time.Now()
+	s.mu.Lock()
+	info, err := PrintFields(s.cfg, fields, effectiveCopies)
+	s.mu.Unlock()
+
+	logFields := []zap.Field{
+		zap.Int("field_count", len(fields)),
+		zap.Int32("copies", effectiveCopies),
+		zap.Duration("latency", time.Since(start)),
+		zap.String("used_model", info.UsedModel),
+		zap.Int32("printer_status", info.Status),
+		zap.String("firmware", info.Firmware),
+		zap.String("sn", info.SN),
+	}
+	if err != nil {
+		logFields = append(logFields, zap.Error(err))
+		L().Error("print failed", logFields...)
+		return info, err
+	}
+
+	L().Info("print succeeded", logFields...)
+	return info, nil
 }
 
 // StartHTTPServer 启动 Gin 服务。
@@ -41,10 +66,16 @@ func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
 		return errors.New("printer service is nil")
 	}
 
-	g := gin.Default()
+	g := gin.New()
+	g.Use(httpRequestLogger(), httpRecoveryLogger())
 	g.POST("/print", func(c *gin.Context) {
 		var fields []ZhyhField
 		if err := c.ShouldBindJSON(&fields); err != nil {
+			L().Warn("http print bind failed",
+				zap.Error(err),
+				zap.String("client_ip", c.ClientIP()),
+				zap.String("path", c.Request.URL.Path),
+			)
 			c.JSON(http.StatusBadRequest, gin.H{
 				"ok":    false,
 				"error": err.Error(),
@@ -76,4 +107,51 @@ func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
 	})
 
 	return g.Run(addr)
+}
+
+func httpRequestLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
+		fields := []zap.Field{
+			zap.String("method", c.Request.Method),
+			zap.String("path", path),
+			zap.Int("status", c.Writer.Status()),
+			zap.Duration("latency", time.Since(start)),
+			zap.String("client_ip", c.ClientIP()),
+		}
+		if len(c.Errors) > 0 {
+			fields = append(fields, zap.String("errors", c.Errors.String()))
+		}
+
+		L().Info("http request", fields...)
+	}
+}
+
+func httpRecoveryLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				path := c.FullPath()
+				if path == "" {
+					path = c.Request.URL.Path
+				}
+				L().Error("http panic",
+					zap.Any("panic", recovered),
+					zap.String("method", c.Request.Method),
+					zap.String("path", path),
+					zap.String("client_ip", c.ClientIP()),
+				)
+				c.AbortWithStatus(http.StatusInternalServerError)
+			}
+		}()
+
+		c.Next()
+	}
 }

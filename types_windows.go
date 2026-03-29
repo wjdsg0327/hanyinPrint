@@ -37,6 +37,12 @@ type LabelOptions struct {
 	MarginTopMM   int32 `json:"margin_top_mm"`
 }
 
+// LogConfig 描述日志输出配置。
+type LogConfig struct {
+	FilePath string `json:"file_path"`
+	Level    string `json:"level"`
+}
+
 // PrintConfig 描述一次打印需要的基础信息。
 type PrintConfig struct {
 	SDKPath string       `json:"sdk_path"`
@@ -50,6 +56,7 @@ type AppConfig struct {
 	HTTPAddr   string      `json:"http_addr"`
 	TenantCode string      `json:"tenant_code"`
 	Printer    PrintConfig `json:"printer"`
+	Log        LogConfig   `json:"log"`
 }
 
 // PrinterInfo 返回打印机基础信息，便于前端展示/排障。

@@ -5,6 +5,8 @@ package main
 import (
 	"errors"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 // tryCreatePrinter 用多个候选 model 尝试创建打印机句柄。
@@ -27,14 +29,18 @@ func tryCreatePrinter(sdk *tsplSDK, model string) (uintptr, string, error) {
 			continue
 		}
 		seen[m] = struct{}{}
+		L().Info("trying printer model", zap.String("model", m))
 		h, err := sdk.printerCreator(m)
 		if err == nil {
+			L().Info("printer model selected", zap.String("model", m))
 			return h, m, nil
 		}
+		L().Warn("printer model failed", zap.String("model", m), zap.Error(err))
 		lastErr = err
 	}
 	if lastErr == nil {
 		lastErr = errors.New("PrinterCreator 失败：没有可用的 model")
 	}
+	L().Error("all printer models failed", zap.Error(lastErr))
 	return 0, "", lastErr
 }
