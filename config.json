@@ -1,5 +1,6 @@
 {
   "http_addr": ":8080",
+  "tenant_code":"mingxiang-01",
   "printer": {
     "sdk_path": "Resources\\Libs\\x64\\Ansi\\TSPL_SDK.dll",
     "model": "N41BT",

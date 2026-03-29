@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 )
 
@@ -17,7 +18,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	err1 := Connect("ws://127.0.0.1:30000/api/ws/" + appCfg.TenantCode)
+	if err1 != nil {
+		fmt.Println("adsdadsd", err1)
+		return
+	}
+
 	if err := StartHTTPServer(appCfg.Printer, appCfg.HTTPAddr); err != nil {
 		log.Fatal(err)
 	}
+
 }

@@ -47,8 +47,9 @@ type PrintConfig struct {
 
 // AppConfig 是服务端配置文件的结构。
 type AppConfig struct {
-	HTTPAddr string      `json:"http_addr"`
-	Printer  PrintConfig `json:"printer"`
+	HTTPAddr   string      `json:"http_addr"`
+	TenantCode string      `json:"tenant_code"`
+	Printer    PrintConfig `json:"printer"`
 }
 
 // PrinterInfo 返回打印机基础信息，便于前端展示/排障。
