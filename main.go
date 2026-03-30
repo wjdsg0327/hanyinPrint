@@ -3,11 +3,41 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+	"errors"
 	"flag"
 	"os"
 
 	"go.uber.org/zap"
 )
+
+// 解密函数
+func decrypt(encryptedText string) (string, error) {
+	key := "OldWang-is-A-handsomeGuy"
+	block, err := aes.NewCipher([]byte(key))
+	if err != nil {
+		return "", err
+	}
+
+	cipherText, err := base64.StdEncoding.DecodeString(encryptedText)
+	if err != nil {
+		return "", err
+	}
+
+	if len(cipherText) < aes.BlockSize {
+		return "", errors.New("ciphertext too short")
+	}
+
+	iv := cipherText[:aes.BlockSize]
+	cipherText = cipherText[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(cipherText, cipherText)
+
+	return string(cipherText), nil
+}
 
 // main 仅负责启动 HTTP 服务，具体打印逻辑拆分到其他文件。
 func main() {
@@ -38,7 +68,12 @@ func main() {
 
 	printer := NewPrinterService(appCfg.Printer)
 
-	if err := Connect("ws://127.0.0.1:30000/api/ws/"+appCfg.TenantCode, printer); err != nil {
+	url, err := decrypt(appCfg.Key)
+	if err != nil {
+		L().Fatal("decrypt key failed", zap.Error(err), zap.String("key", appCfg.Key))
+	}
+
+	if err := Connect(url+"/api/ws/"+appCfg.TenantCode, printer); err != nil {
 		L().Error("websocket connect failed", zap.Error(err), zap.String("tenant_code", appCfg.TenantCode))
 		return
 	}

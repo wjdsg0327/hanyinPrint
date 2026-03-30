@@ -55,6 +55,7 @@ type PrintConfig struct {
 type AppConfig struct {
 	HTTPAddr   string      `json:"http_addr"`
 	TenantCode string      `json:"tenant_code"`
+	Key        string      `json:"key"`
 	Printer    PrintConfig `json:"printer"`
 	Log        LogConfig   `json:"log"`
 }
