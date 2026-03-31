@@ -50,6 +50,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := ensureTenantCode(&appCfg, *configPath); err != nil {
+		_, _ = os.Stderr.WriteString(err.Error() + "\n")
+		os.Exit(1)
+	}
+
 	if err := InitLogger(appCfg.Log); err != nil {
 		_, _ = os.Stderr.WriteString(err.Error() + "\n")
 		os.Exit(1)
@@ -78,7 +83,7 @@ func main() {
 		return
 	}
 
-	if err := StartHTTPServerWithPrinter(printer, appCfg.HTTPAddr); err != nil {
+	if err := StartHTTPServerWithPrinter(printer, appCfg); err != nil {
 		L().Fatal("http server exited", zap.Error(err), zap.String("http_addr", appCfg.HTTPAddr))
 	}
 }

@@ -1,6 +1,7 @@
 {
-  "http_addr": ":8080",
-  "tenant_code": "mingxiang-01",
+  "http_addr": ":10086",
+  "tenant_code": "",
+  "key": "",
   "printer": {
     "sdk_path": "Resources\\Libs\\x64\\Ansi\\TSPL_SDK.dll",
     "model": "N41",
@@ -8,18 +9,18 @@
     "options": {
       "label_width_mm": 60,
       "label_height_mm": 35,
-      "dpi": 203,
       "speed": 2,
       "density": 6,
       "type": 1,
       "gap_mm": 2,
       "offset_mm": 0,
+      "dpi": 203,
       "margin_left_mm": 6,
       "margin_top_mm": 2
     }
   },
   "log": {
-    "file_path": "logs/hanyinPrint.log",
+    "file_path": "logs\\hanyinPrint.log",
     "level": "info"
   }
 }

@@ -23,6 +23,19 @@ type ProductLabel struct {
 	QR      string
 }
 
+//- label_width_mm ：标签宽度（mm）
+//- label_height_mm ：标签高度（mm）
+//- dpi ：打印机分辨率（常见 203 或 300），用于把 mm 转成坐标点（dots）
+//- speed ：打印速度（SDK 参数，整数）
+//- density ：打印浓度（SDK 参数，整数）
+//- type ：纸张类型（SDK 参数，整数，示例里用 1）
+//- gap_mm ：标签间隙（mm）
+//- offset_mm ：偏移（mm）
+//和“内容位置”有关：
+//
+//- margin_left_mm ：左边距（mm），越大内容越往右
+//- margin_top_mm ：上边距（mm），越大内容越往下
+
 // LabelOptions 是 TSPL_Setup 相关配置。
 type LabelOptions struct {
 	LabelWidthMM  int32 `json:"label_width_mm"`

@@ -135,11 +135,11 @@ func (s *PrinterService) PrintFields(fields []ZhyhField, copies int32) (PrinterI
 //   - GET /printer/status
 //   - POST /print?copies=1
 //     Body: []ZhyhField
-func StartHTTPServer(cfg PrintConfig, addr string) error {
-	return StartHTTPServerWithPrinter(NewPrinterService(cfg), addr)
+func StartHTTPServer(cfg PrintConfig, appConfig AppConfig) error {
+	return StartHTTPServerWithPrinter(NewPrinterService(cfg), appConfig)
 }
 
-func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
+func StartHTTPServerWithPrinter(printer *PrinterService, appConfig AppConfig) error {
 	if printer == nil {
 		return errors.New("printer service is nil")
 	}
@@ -150,17 +150,19 @@ func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
 		info, err := printer.GetStatus()
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
-				"ok":        true,
+				//"ok":        true,
 				"connected": false,
 				"error":     err.Error(),
+				"设备编码":      appConfig.TenantCode,
 			})
 			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{
-			"ok":        true,
-			"connected": true,
-			"info":      info,
+			//"ok":      true,
+			"打印机是否连接": true,
+			"info":    info,
+			"设备编码":    appConfig.TenantCode,
 		})
 	})
 	g.POST("/print", func(c *gin.Context) {
@@ -201,7 +203,7 @@ func StartHTTPServerWithPrinter(printer *PrinterService, addr string) error {
 		})
 	})
 
-	return g.Run(addr)
+	return g.Run(appConfig.HTTPAddr)
 }
 
 func httpRequestLogger() gin.HandlerFunc {

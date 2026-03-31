@@ -51,3 +51,15 @@ func LoadAppConfigFromJSON(filePath string) (AppConfig, error) {
 
 	return cfg, nil
 }
+
+// SaveAppConfigToJSON 将配置写回 json 文件，保持缩进方便用户查看。
+func SaveAppConfigToJSON(cfg AppConfig, filePath string) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("序列化配置失败: %w", err)
+	}
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("写入配置文件失败: %w", err)
+	}
+	return nil
+}
