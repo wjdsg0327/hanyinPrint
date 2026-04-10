@@ -37,6 +37,7 @@ func Connect(url string, printer *PrinterService) (err error) {
 	dialer := websocket.DefaultDialer
 	conn, _, err := dialer.Dial(url, nil)
 	if err != nil {
+		L().Error("连接失败")
 		return fmt.Errorf("连接失败: %w", err)
 	}
 

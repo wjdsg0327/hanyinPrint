@@ -154,6 +154,7 @@ func StartHTTPServerWithPrinter(printer *PrinterService, appConfig AppConfig) er
 				"connected": false,
 				"error":     err.Error(),
 				"设备编码":      appConfig.TenantCode,
+				"服务器":       abgiClient != nil,
 			})
 			return
 		}

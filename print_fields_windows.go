@@ -93,14 +93,14 @@ func printFields(sdk *tsplSDK, handle uintptr, opt LabelOptions, fields []ZhyhFi
 	for _, f := range fields {
 		typ := strings.ToLower(strings.TrimSpace(f.ZhyhType))
 		key := strings.TrimSpace(f.ZhyhKey)
-		val := strings.TrimSpace(f.ZhyhValue)
+		val := f.ZhyhValue
 
 		switch typ {
 		case "barcode", "bar", "code128":
 			if val == "" {
 				continue
 			}
-			if err := sdk.tsplBarCode(handle, xLeft, y, 0, MmToDots(10, opt.DPI), 1, 0, 2, 2, val); err != nil {
+			if err := sdk.tsplBarCode(handle, xLeft, y, 0, MmToDots(10, opt.DPI), 1, 0, 2, 2, val.(string)); err != nil {
 				return err
 			}
 			y += MmToDots(16, opt.DPI)
@@ -112,7 +112,7 @@ func printFields(sdk *tsplSDK, handle uintptr, opt LabelOptions, fields []ZhyhFi
 			if qrX < xLeft {
 				qrX = xLeft
 			}
-			if err := sdk.tsplQrCode(handle, qrX, y, 3, 4, 0, 0, 0, 7, "\""+val+"\""); err != nil {
+			if err := sdk.tsplQrCode(handle, qrX, y, 3, 4, 0, 0, 0, 7, "\""+val.(string)+"\""); err != nil {
 				return err
 			}
 			y += MmToDots(18, opt.DPI)
@@ -122,11 +122,11 @@ func printFields(sdk *tsplSDK, handle uintptr, opt LabelOptions, fields []ZhyhFi
 			}
 			text := val
 			if key != "" && val != "" {
-				text = key + ":" + val
+				text = key + ":" + val.(string)
 			} else if key != "" {
 				text = key
 			}
-			if err := sdk.tsplTextCompatibleGBK(handle, xLeft, y, 9, 0, 1, 1, text); err != nil {
+			if err := sdk.tsplTextCompatibleGBK(handle, xLeft, y, 9, 0, 1, 1, text.(string)); err != nil {
 				return err
 			}
 			y += lineGap

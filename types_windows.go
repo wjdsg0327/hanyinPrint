@@ -8,9 +8,9 @@ package main
 // - zhyh_key:  字段名称（用于 text 的 key:value）
 // - zhyh_value:字段内容
 type ZhyhField struct {
-	ZhyhType  string `json:"zhyh_type"`
-	ZhyhKey   string `json:"zhyh_key"`
-	ZhyhValue string `json:"zhyh_value"`
+	ZhyhType  string      `json:"zhyh_type"`
+	ZhyhKey   string      `json:"zhyh_key"`
+	ZhyhValue interface{} `json:"zhyh_value"`
 }
 
 // ProductLabel 是常见的“商品标签”结构（如果前端固定字段，可用这个结构）。
